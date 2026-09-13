@@ -6,6 +6,7 @@ import { RequestPage } from './pages/RequestPage';
 import { UnderstandingPage } from './pages/UnderstandingPage';
 import { ResultsPage } from './pages/ResultsPage';
 import { OrderSummaryPage } from './pages/OrderSummaryPage';
+import { PrescriptionReviewPage } from './pages/PrescriptionReviewPage';
 
 import { 
   MedicineItem, 
@@ -16,12 +17,14 @@ import {
 import { Pharmacy, DemoLocation } from './types/pharmacy';
 import { demoPharmacyProvider, DEMO_USER_LOCATION } from './services/pharmacy/demoPharmacyProvider';
 import { extractMedicinesWithAI } from './services/ai/geminiService';
+import { analyzePrescriptionWithGemini, PrescriptionAnalysisResult } from './services/gemini/prescriptionAnalyzer';
 import { runSmartFulfilmentEngine } from './services/fulfilment/smartFulfilmentEngine';
 import { EngineResult } from './services/fulfilment/types';
 
 export const App: React.FC = () => {
   // Navigation View State
-  const [currentView, setCurrentView] = useState<'home' | 'request' | 'understanding' | 'results' | 'order_summary'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'request' | 'understanding' | 'prescription_review' | 'results' | 'order_summary'>('home');
+  const [requestDefaultMode, setRequestDefaultMode] = useState<'text' | 'prescription' | 'manual'>('text');
 
   // Domain Data State
   const [allPharmacies, setAllPharmacies] = useState<Pharmacy[]>([]);
@@ -32,6 +35,10 @@ export const App: React.FC = () => {
   const [safetyAlert, setSafetyAlert] = useState<string | undefined>(undefined);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [prefillSample, setPrefillSample] = useState<SamplePrescription | null>(null);
+
+  // Prescription Analysis State
+  const [prescriptionAnalysis, setPrescriptionAnalysis] = useState<PrescriptionAnalysisResult | null>(null);
+  const [isPrescriptionSource, setIsPrescriptionSource] = useState<boolean>(false);
 
   // Engine Optimization Result State
   const [confirmedRequest, setConfirmedRequest] = useState<StructuredMedicineRequest | null>(null);
@@ -97,6 +104,31 @@ export const App: React.FC = () => {
     }
   };
 
+  // Handler: Analyze Uploaded Prescription Image via Gemini Vision
+  const handleAnalyzePrescription = async (base64: string, mimeType: string, isDemoPreset?: boolean) => {
+    setIsAnalyzing(true);
+    setRequestError(null);
+    setSafetyAlert(undefined);
+
+    try {
+      const result = await analyzePrescriptionWithGemini(base64, mimeType, isDemoPreset);
+      setPrescriptionAnalysis(result);
+      setIsPrescriptionSource(true);
+
+      if (!result.prescriptionReadable || result.medicines.length === 0) {
+        setRequestError("Couldn't analyze the prescription automatically. Please upload a clearer photo or enter medicines manually.");
+        return;
+      }
+
+      setCurrentView('prescription_review');
+    } catch (err) {
+      console.error('Prescription analysis error:', err);
+      setRequestError("Couldn't analyze the prescription automatically. Enter medicines manually or use demo prescription.");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   // Handler: User Confirms Medicines -> Run Smart Fulfilment Engine with smooth loading state
   const handleConfirmAndOptimize = async (structuredReq: StructuredMedicineRequest) => {
     setIsOptimizing(true);
@@ -136,6 +168,8 @@ export const App: React.FC = () => {
     setPrefillSample(sample);
     setMedicines(sample.medicines);
     setUrgency(sample.urgency);
+    setIsPrescriptionSource(false);
+    setRequestDefaultMode('text');
     setRequestError(null);
     setCurrentView('request');
   };
@@ -146,6 +180,9 @@ export const App: React.FC = () => {
     setSafetyAlert(undefined);
     setConfirmedRequest(null);
     setEngineResult(null);
+    setPrescriptionAnalysis(null);
+    setIsPrescriptionSource(false);
+    setRequestDefaultMode('text');
     setCurrentView('home');
   };
 
@@ -153,7 +190,7 @@ export const App: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-[#F5F9FF] text-slate-900 selection:bg-blue-600 selection:text-white">
       {/* Top Application Header */}
       <Header
-        currentView={currentView === 'order_summary' ? 'results' : currentView}
+        currentView={currentView === 'order_summary' ? 'results' : currentView === 'prescription_review' ? 'request' : currentView}
         onNavigate={(view) => {
           if (view === 'home') handleResetFlow();
           else setCurrentView(view);
@@ -168,6 +205,15 @@ export const App: React.FC = () => {
             onStartOrder={() => {
               setPrefillSample(null);
               setRequestError(null);
+              setIsPrescriptionSource(false);
+              setRequestDefaultMode('text');
+              setCurrentView('request');
+            }}
+            onUploadPrescription={() => {
+              setPrefillSample(null);
+              setRequestError(null);
+              setIsPrescriptionSource(true);
+              setRequestDefaultMode('prescription');
               setCurrentView('request');
             }}
             onSelectSample={handleSelectSample}
@@ -177,9 +223,11 @@ export const App: React.FC = () => {
         {currentView === 'request' && (
           <RequestPage
             onAnalyze={handleAnalyzeRequest}
+            onAnalyzePrescription={handleAnalyzePrescription}
             isLoading={isAnalyzing}
             prefillSample={prefillSample}
             errorMessage={requestError}
+            defaultMode={requestDefaultMode}
           />
         )}
 
@@ -196,14 +244,30 @@ export const App: React.FC = () => {
           />
         )}
 
+        {currentView === 'prescription_review' && prescriptionAnalysis && (
+          <PrescriptionReviewPage
+            analysisResult={prescriptionAnalysis}
+            onConfirmMedicines={handleConfirmAndOptimize}
+            onBackToUpload={() => setCurrentView('request')}
+            isOptimizing={isOptimizing}
+          />
+        )}
+
         {currentView === 'results' && engineResult && (
           <ResultsPage
             engineResult={engineResult}
             allPharmacies={allPharmacies}
             userLocation={DEMO_USER_LOCATION}
             urgency={confirmedRequest?.urgency || urgency}
+            isPrescriptionSource={isPrescriptionSource}
             onContinueToOrder={() => setCurrentView('order_summary')}
-            onModifyRequest={() => setCurrentView('understanding')}
+            onModifyRequest={() => {
+              if (isPrescriptionSource && prescriptionAnalysis) {
+                setCurrentView('prescription_review');
+              } else {
+                setCurrentView('understanding');
+              }
+            }}
             onRetryWithAlternativeNetwork={() => setCurrentView('request')}
           />
         )}

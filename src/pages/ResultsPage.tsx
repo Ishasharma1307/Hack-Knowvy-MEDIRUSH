@@ -20,7 +20,8 @@ import {
   Cpu,
   Layers,
   Check,
-  Info
+  Info,
+  FileText
 } from 'lucide-react';
 import { EngineResult, FulfilmentPlan } from '../services/fulfilment/types';
 import { Pharmacy, DemoLocation } from '../types/pharmacy';
@@ -33,6 +34,7 @@ interface ResultsPageProps {
   allPharmacies: Pharmacy[];
   userLocation?: DemoLocation;
   urgency?: string;
+  isPrescriptionSource?: boolean;
   onContinueToOrder: () => void;
   onModifyRequest: () => void;
   onRetryWithAlternativeNetwork?: () => void;
@@ -43,6 +45,7 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
   allPharmacies,
   userLocation = DEMO_USER_LOCATION,
   urgency = 'urgent',
+  isPrescriptionSource = false,
   onContinueToOrder,
   onModifyRequest,
   onRetryWithAlternativeNetwork,
@@ -289,6 +292,12 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
               <Cpu className="w-3.5 h-3.5 text-[#1565C0]" />
               Optimized by MediRush Smart Fulfilment Engine
             </span>
+            {isPrescriptionSource && (
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full">
+                <FileText className="w-3.5 h-3.5 text-indigo-600" />
+                Source: Prescription
+              </span>
+            )}
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-5xl sm:text-6xl font-black font-['Outfit'] text-[#2E7D32]">
@@ -322,6 +331,28 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Prescription -> Optimization Connection Banner (Prompt Section 21) */}
+      {isPrescriptionSource && (
+        <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs animate-fadeIn">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#1565C0] text-white flex items-center justify-center shrink-0">
+              <FileText className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                <span>Prescription Complete</span>
+                <span className="text-[10px] bg-emerald-100 text-[#2E7D32] px-2 py-0.5 rounded-md font-extrabold">
+                  {bestPlan.medicinesCoveredCount}/{bestPlan.totalMedicinesRequestedCount} Available
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 mt-0.5">
+                {bestPlan.totalMedicinesRequestedCount} medicines identified from prescription • Smart Fulfilment Engine selected {bestPlan.pharmacyCount} pharmacies for fastest arrival.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Gemini AI Explanation Section — IMMEDIATELY AFTER HERO (Prompt 5 Section 10) */}
       <section className="bg-white rounded-3xl border border-blue-200 p-6 shadow-xs space-y-4">

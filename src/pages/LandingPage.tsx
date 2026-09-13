@@ -12,17 +12,19 @@ import {
   ShieldAlert,
   HelpCircle,
   Network,
-  TrendingDown
+  TrendingDown,
+  Camera
 } from 'lucide-react';
 import { SamplePrescription } from '../types';
 import { DEMO_SCENARIOS, DemoScenario } from '../config/demoConfig';
 
 interface LandingPageProps {
   onStartOrder: () => void;
+  onUploadPrescription?: () => void;
   onSelectSample: (sample: SamplePrescription) => void;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onStartOrder, onSelectSample }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onStartOrder, onUploadPrescription, onSelectSample }) => {
   const scrollToHowItWorks = () => {
     const el = document.getElementById('how-it-works');
     if (el) {
@@ -80,18 +82,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartOrder, onSelect
           </p>
 
           {/* Primary & Secondary CTAs */}
-          <div className="pt-3 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="pt-3 flex flex-col sm:flex-row items-center justify-center gap-3.5">
             <button
               onClick={onStartOrder}
-              className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-[#1565C0] hover:bg-[#0D47A1] text-white font-bold text-base shadow-lg shadow-blue-600/30 hover:shadow-blue-600/40 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-3 cursor-pointer"
+              className="w-full sm:w-auto px-7 py-4 rounded-2xl bg-[#1565C0] hover:bg-[#0D47A1] text-white font-bold text-base shadow-lg shadow-blue-600/30 hover:shadow-blue-600/40 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2.5 cursor-pointer"
             >
               <span>Find my medicines</span>
               <ArrowRight className="w-5 h-5" />
             </button>
 
+            {onUploadPrescription && (
+              <button
+                onClick={onUploadPrescription}
+                className="w-full sm:w-auto px-6 py-4 rounded-2xl bg-white hover:bg-blue-50 text-[#1565C0] font-bold text-base border-2 border-blue-200 hover:border-blue-300 shadow-xs hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Camera className="w-4 h-4 text-[#1565C0]" />
+                <span>Upload prescription</span>
+              </button>
+            )}
+
             <button
               onClick={scrollToHowItWorks}
-              className="w-full sm:w-auto px-7 py-4 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-base border border-slate-200 shadow-xs hover:border-slate-300 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full sm:w-auto px-6 py-4 rounded-2xl bg-white/80 hover:bg-slate-50 text-slate-700 font-bold text-base border border-slate-200 shadow-xs hover:border-slate-300 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <HelpCircle className="w-4 h-4 text-slate-500" />
               <span>See how it works</span>
