@@ -5,9 +5,12 @@ import { parseMedicineRequestOffline, DEMO_PRESET_MEDICINES } from './fallbackPa
 const STORAGE_KEY_API_KEY = 'medirush_gemini_api_key';
 
 export function getStoredGeminiApiKey(): string {
+  // 1. User-saved key in browser localStorage
   const localKey = localStorage.getItem(STORAGE_KEY_API_KEY);
   if (localKey && localKey.trim()) return localKey.trim();
-  return (import.meta.env.VITE_GEMINI_API_KEY as string) || '';
+  // 2. Key from .env file (VITE_GEMINI_API_KEY, gitignored)
+  const envKey = (import.meta.env.VITE_GEMINI_API_KEY as string) || '';
+  return envKey.trim();
 }
 
 export function saveGeminiApiKey(key: string): void {
