@@ -22,11 +22,11 @@ import {
 import { MedicineItem, UrgencyLevel, SamplePrescription } from '../types';
 import { getDemoPrescriptionFallback } from '../services/ai/geminiService';
 import { validatePrescriptionFile, fileToBase64 } from '../services/gemini/prescriptionAnalyzer';
-import { generateSyntheticPrescriptionDataUrl } from '../utils/demoPrescriptionImage';
+import { generateSyntheticPrescriptionDataUrl, getDemoPrescriptionText } from '../utils/demoPrescriptionImage';
 
 interface RequestPageProps {
   onAnalyze: (prompt: string, manualItems?: MedicineItem[], urgency?: UrgencyLevel) => Promise<void>;
-  onAnalyzePrescription?: (base64: string, mimeType: string, isDemoPreset?: boolean) => Promise<void>;
+  onAnalyzePrescription?: (base64: string, mimeType: string, isDemoPreset?: boolean, demoPrescriptionText?: string) => Promise<void>;
   isLoading: boolean;
   prefillSample?: SamplePrescription | null;
   errorMessage?: string | null;
@@ -55,6 +55,7 @@ export const RequestPage: React.FC<RequestPageProps> = ({
     fileName: string;
     fileSizeKb: number;
     isDemo: boolean;
+    demoPrescriptionText?: string;
   } | null>(null);
   const [imageQualityWarning, setImageQualityWarning] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -187,6 +188,7 @@ export const RequestPage: React.FC<RequestPageProps> = ({
     const dataUrl = generateSyntheticPrescriptionDataUrl();
     const parts = dataUrl.split(',');
     const base64 = parts[1] || '';
+    const prescriptionText = getDemoPrescriptionText();
 
     setSelectedImage({
       dataUrl,
@@ -195,6 +197,7 @@ export const RequestPage: React.FC<RequestPageProps> = ({
       fileName: 'Synthetic_Hospital_Prescription_Demo.svg',
       fileSizeKb: 45,
       isDemo: true,
+      demoPrescriptionText: prescriptionText,
     });
   };
 
@@ -205,7 +208,12 @@ export const RequestPage: React.FC<RequestPageProps> = ({
     }
 
     if (onAnalyzePrescription) {
-      onAnalyzePrescription(selectedImage.base64, selectedImage.mimeType, selectedImage.isDemo);
+      onAnalyzePrescription(
+        selectedImage.base64,
+        selectedImage.mimeType,
+        selectedImage.isDemo,
+        selectedImage.demoPrescriptionText
+      );
     }
   };
 

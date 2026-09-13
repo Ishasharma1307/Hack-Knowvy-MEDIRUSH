@@ -1,6 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { getStoredGeminiApiKey } from '../ai/geminiService';
-import { normalizeMedicineName } from '../../utils/medicineNormalization';
 
 export interface ExtractedPrescriptionMedicine {
   id: string;
@@ -23,12 +22,13 @@ export interface PrescriptionAnalysisResult {
   notes?: string;
   rawImagePreview?: string;
   warning?: string;
-  source: 'gemini_vision' | 'demo_synthetic' | 'manual_fallback';
+  source: 'gemini_vision' | 'gemini_text' | 'demo_synthetic' | 'manual_fallback';
 }
 
+// ─── DEMO SYNTHETIC FALLBACK (only used when API key is absent) ─────────────
+
 /**
- * Standard benchmark synthetic prescription result matching the local pharmacy network.
- * Used for demo testing or when API key is unavailable.
+ * Hardcoded fallback result — only used when no API key is present at all.
  */
 export function getDemoSyntheticPrescriptionResult(includeUnclear: boolean = false): PrescriptionAnalysisResult {
   const meds: ExtractedPrescriptionMedicine[] = [
@@ -105,6 +105,8 @@ export function getDemoSyntheticPrescriptionResult(includeUnclear: boolean = fal
   };
 }
 
+// ─── FILE VALIDATION ─────────────────────────────────────────────────────────
+
 /**
  * Validates basic image file properties before processing.
  */
@@ -133,6 +135,8 @@ export function validatePrescriptionFile(file: File): { valid: boolean; error?: 
   return { valid: true };
 }
 
+// ─── BASE64 HELPER ────────────────────────────────────────────────────────────
+
 /**
  * Helper to convert a File to Base64 data string (without the data URL prefix)
  */
@@ -152,77 +156,138 @@ export async function fileToBase64(file: File): Promise<{ base64: string; dataUr
   });
 }
 
-/**
- * Calls Gemini Vision to inspect the visible prescription contents and extract
- * clinical medicine requirements in structured JSON format.
- * 
- * Strict Clinical & Ethical Safety Constraints:
- * - Inspects visible text ONLY.
- * - Never guesses unreadable handwriting (flags as needsConfirmation).
- * - Never diagnoses illness.
- * - Never recommends substitutions.
- * - Never invents dosages or quantities.
- */
-export async function analyzePrescriptionWithGemini(
-  base64Data: string,
-  mimeType: string,
-  isDemoPreset: boolean = false
-): Promise<PrescriptionAnalysisResult> {
-  if (isDemoPreset) {
-    return getDemoSyntheticPrescriptionResult(false);
-  }
+// ─── THE GEMINI PROMPT ────────────────────────────────────────────────────────
 
-  const apiKey = getStoredGeminiApiKey();
-
-  if (!apiKey) {
-    console.log('[MediRush Vision] No Gemini API key provided. Using calibrated synthetic prescription extraction.');
-    return getDemoSyntheticPrescriptionResult(false);
-  }
-
-  try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
-      generationConfig: {
-        responseMimeType: 'application/json',
-        temperature: 0.1,
-      },
-    });
-
-    const prompt = `
-You are the Prescription Extraction Layer of MediRush, an intelligent medicine delivery platform.
-Analyze the uploaded prescription image carefully and extract all visible medicines.
+const EXTRACTION_PROMPT = `You are the Prescription Extraction Layer of MediRush, an intelligent medicine delivery platform.
+Analyze the prescription carefully and extract ALL visible medicines.
 
 STRICT MEDICAL & ETHICAL RULES:
-1. Extract ONLY information that is clearly visible in the prescription image.
-2. DO NOT guess or hallucinate unclear handwriting. If a medicine name, strength, quantity, or instruction is not 100% clear, set "needsConfirmation": true, and set "medicineName": null (or provide potential candidate names in "uncertainCandidates").
+1. Extract ONLY information that is clearly visible.
+2. If a medicine name, strength, quantity, or instruction is not clearly legible, set "needsConfirmation": true and provide "uncertainCandidates" if possible.
 3. DO NOT diagnose the patient or infer diseases.
-4. DO NOT prescribe, recommend alternatives, or substitute medications.
-5. DO NOT invent quantities if not written (set quantity to null).
-6. Label dosage directions as "instructions" (e.g., "1 tablet after food", "1-0-1").
+4. DO NOT recommend alternatives or substitute medications.
+5. DO NOT invent quantities if not written — set quantity to null.
+6. Label dosage directions as "instructions".
 
-Return JSON matching this exact schema:
+Return ONLY valid JSON matching this exact schema (no markdown, no extra text):
 {
   "prescriptionReadable": true,
   "medicines": [
     {
-      "rawName": "Exact text detected on prescription",
-      "medicineName": "Standardized generic or brand name (e.g. Dolo 650, Pantoprazole) or null if uncertain",
-      "strength": "e.g. 650 mg, 40 mg, 500 mg (or null if not written)",
-      "form": "tablet | capsule | syrup | strip | sachet | inhaler | drops",
+      "rawName": "Exact text from prescription",
+      "medicineName": "Standardized brand or generic name (e.g. Dolo 650, Augmentin 625mg, Telma 40, Metformin 500mg)",
+      "strength": "e.g. 650mg, 40mg (or null if not written)",
+      "form": "tablet | capsule | syrup | sachet | inhaler | drops | strip",
       "quantity": 10,
-      "unit": "tablet | strip | bottle | sachet | pack",
-      "instructions": "Exact prescription directions e.g. 1-0-1 after food",
+      "unit": "tablet | strip | bottle | sachet | pack | ml",
+      "instructions": "e.g. 1-0-1 after food",
       "confidence": 0.95,
       "needsConfirmation": false,
       "uncertainCandidates": []
     }
   ],
-  "unclearItems": ["Description of any unreadable lines or ink smudges"],
-  "notes": "Brief extraction context"
-}
-`;
+  "unclearItems": [],
+  "notes": "Brief summary of what was extracted"
+}`;
 
+// ─── PARSE GEMINI JSON RESPONSE ───────────────────────────────────────────────
+
+function parseGeminiResponse(responseText: string, source: 'gemini_vision' | 'gemini_text'): PrescriptionAnalysisResult {
+  // Strip potential markdown code fences
+  const cleaned = responseText.replace(/^```json\s*/m, '').replace(/```\s*$/m, '').trim();
+  const parsed = JSON.parse(cleaned);
+
+  if (!parsed || !Array.isArray(parsed.medicines)) {
+    throw new Error('Invalid JSON schema returned from Gemini');
+  }
+
+  const sanitizedMedicines: ExtractedPrescriptionMedicine[] = parsed.medicines.map((item: any, idx: number) => {
+    const rawName = typeof item.rawName === 'string' ? item.rawName.trim() : `Item ${idx + 1}`;
+    const detectedName = typeof item.medicineName === 'string' && item.medicineName.trim() ? item.medicineName.trim() : null;
+    const confidence = typeof item.confidence === 'number' ? Math.max(0, Math.min(1, item.confidence)) : 0.85;
+    const needsConfirmation = item.needsConfirmation === true || confidence < 0.75 || !detectedName;
+
+    return {
+      id: `rx_item_${Date.now()}_${idx}`,
+      rawName,
+      medicineName: detectedName,
+      strength: typeof item.strength === 'string' && item.strength.trim() ? item.strength.trim() : undefined,
+      form: typeof item.form === 'string' ? item.form.trim() : 'tablet',
+      quantity: typeof item.quantity === 'number' && item.quantity > 0 ? Math.round(item.quantity) : null,
+      unit: typeof item.unit === 'string' && item.unit.trim() ? item.unit.trim() : 'tablet',
+      instructions: typeof item.instructions === 'string' ? item.instructions.trim() : undefined,
+      confidence,
+      needsConfirmation,
+      uncertainCandidates: Array.isArray(item.uncertainCandidates) && item.uncertainCandidates.length > 0
+        ? item.uncertainCandidates
+        : undefined,
+    };
+  });
+
+  return {
+    prescriptionReadable: parsed.prescriptionReadable !== false,
+    medicines: sanitizedMedicines,
+    unclearItems: Array.isArray(parsed.unclearItems) ? parsed.unclearItems : [],
+    notes: typeof parsed.notes === 'string' ? parsed.notes : '',
+    source,
+  };
+}
+
+// ─── MAIN ENTRY: ANALYZE PRESCRIPTION ────────────────────────────────────────
+
+/**
+ * Analyzes a prescription using Gemini.
+ *
+ * - If isDemoPreset: sends the SVG text directly to Gemini as TEXT so Gemini
+ *   reads the actual prescription text content → returns real extraction.
+ * - If real image: sends as vision (multimodal) call.
+ * - Falls back to demo synthetic ONLY when no API key is available.
+ */
+export async function analyzePrescriptionWithGemini(
+  base64Data: string,
+  mimeType: string,
+  isDemoPreset: boolean = false,
+  demoPrescriptionText?: string // SVG/text content of demo prescription
+): Promise<PrescriptionAnalysisResult> {
+  const apiKey = getStoredGeminiApiKey();
+
+  if (!apiKey) {
+    console.log('[MediRush Vision] No Gemini API key found. Using calibrated synthetic prescription extraction.');
+    return getDemoSyntheticPrescriptionResult(false);
+  }
+
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.5-flash',
+    generationConfig: {
+      responseMimeType: 'application/json',
+      temperature: 0.05,
+    },
+  });
+
+  // ── PATH A: Demo preset → text-based extraction (no image bytes needed) ──
+  if (isDemoPreset && demoPrescriptionText) {
+    try {
+      console.log('[MediRush Vision] Demo preset: sending prescription text to Gemini for real extraction.');
+      const textPrompt = `${EXTRACTION_PROMPT}
+
+Here is the prescription text content to analyze:
+${demoPrescriptionText}`;
+
+      const response = await model.generateContent(textPrompt);
+      const responseText = response.response.text();
+      console.log('[MediRush Vision] Demo text extraction response:', responseText.slice(0, 200));
+      return parseGeminiResponse(responseText, 'gemini_text');
+    } catch (err) {
+      console.warn('[MediRush Vision] Demo text extraction failed:', err);
+      // For demo, fall back to synthetic
+      return getDemoSyntheticPrescriptionResult(false);
+    }
+  }
+
+  // ── PATH B: Real image upload → Gemini Vision multimodal call ──
+  try {
+    console.log('[MediRush Vision] Sending real prescription image to Gemini Vision...');
     const imagePart = {
       inlineData: {
         data: base64Data,
@@ -230,44 +295,14 @@ Return JSON matching this exact schema:
       },
     };
 
-    const response = await model.generateContent([prompt, imagePart]);
+    const response = await model.generateContent([EXTRACTION_PROMPT, imagePart]);
     const responseText = response.response.text();
-    const parsed = JSON.parse(responseText);
+    console.log('[MediRush Vision] Vision response received:', responseText.slice(0, 300));
+    return parseGeminiResponse(responseText, 'gemini_vision');
 
-    if (!parsed || !Array.isArray(parsed.medicines)) {
-      throw new Error('Invalid JSON schema returned from Gemini Vision');
-    }
-
-    const sanitizedMedicines: ExtractedPrescriptionMedicine[] = parsed.medicines.map((item: any, idx: number) => {
-      const rawName = typeof item.rawName === 'string' ? item.rawName.trim() : `Item ${idx + 1}`;
-      const detectedName = typeof item.medicineName === 'string' && item.medicineName.trim() ? item.medicineName.trim() : null;
-      const confidence = typeof item.confidence === 'number' ? Math.max(0, Math.min(1, item.confidence)) : 0.85;
-      const needsConfirmation = item.needsConfirmation === true || confidence < 0.75 || !detectedName;
-
-      return {
-        id: `rx_item_${Date.now()}_${idx}`,
-        rawName,
-        medicineName: detectedName,
-        strength: typeof item.strength === 'string' ? item.strength.trim() : undefined,
-        form: typeof item.form === 'string' ? item.form.trim() : 'tablet',
-        quantity: typeof item.quantity === 'number' && item.quantity > 0 ? Math.round(item.quantity) : null,
-        unit: typeof item.unit === 'string' && item.unit.trim() ? item.unit.trim() : 'tablet',
-        instructions: typeof item.instructions === 'string' ? item.instructions.trim() : undefined,
-        confidence,
-        needsConfirmation,
-        uncertainCandidates: Array.isArray(item.uncertainCandidates) ? item.uncertainCandidates : undefined,
-      };
-    });
-
-    return {
-      prescriptionReadable: parsed.prescriptionReadable !== false,
-      medicines: sanitizedMedicines,
-      unclearItems: Array.isArray(parsed.unclearItems) ? parsed.unclearItems : [],
-      notes: typeof parsed.notes === 'string' ? parsed.notes : '',
-      source: 'gemini_vision',
-    };
-  } catch (err) {
-    console.warn('[MediRush Vision] Gemini Vision call encountered an error or network limit. Activating demo prescription fallback:', err);
-    return getDemoSyntheticPrescriptionResult(false);
+  } catch (err: any) {
+    console.error('[MediRush Vision] Gemini Vision error:', err?.message || err);
+    // Re-throw so the UI can show a real error message instead of silently showing demo data
+    throw err;
   }
 }

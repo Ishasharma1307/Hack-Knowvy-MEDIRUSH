@@ -123,3 +123,46 @@ export function generateSyntheticPrescriptionDataUrl(): string {
 
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
+
+/**
+ * Returns the same prescription data as plain text for Gemini text-mode extraction.
+ * Used when the demo SVG is loaded (no actual image bytes needed).
+ */
+export function getDemoPrescriptionText(): string {
+  return `
+DR. ARVIND RAO, MD (GEN. MEDICINE)
+Reg No: KMC-74892 | CityCare Health Centre, Indiranagar, Bengaluru
+
+PATIENT NAME: Isha Sharma (Female / 26 Yrs)
+DATE: Today (Acute Episode)
+DIAGNOSIS: Acute Upper Respiratory Infection with High-Grade Fever & Gastritis
+
+Rx:
+
+1. Tab. Dolo 650 mg
+   Qty: 10 Tabs
+   Sig: 1 tablet TDS (1-0-1) after food x 3 days for fever/bodyache
+
+2. Cap. Pantoprazole 40 mg
+   Qty: 10 Caps
+   Sig: 1 capsule OD (1-0-0) empty stomach 30 mins before breakfast
+
+3. Tab. Azithromycin 500 mg
+   Qty: 5 Tabs
+   Sig: 1 tablet OD (0-0-1) at night after food x 5 days (complete course)
+
+4. ORS / Electral Sachet
+   Qty: 2 Sachets
+   Sig: Dissolve 1 sachet in 1 liter boiled and cooled water. Sip throughout day.
+
+5. Tab. Cetirizine 10 mg
+   Qty: 10 Tabs
+   Sig: 1 tablet OD (0-0-1) at bedtime for rhinitis / allergy relief
+
+GENERAL ADVICE:
+- Adequate fluid intake (3+ liters/day). Complete full antibiotic course.
+- Review in clinic after 5 days.
+
+Dr. Arvind Rao, MD | Consultant Physician (KMC #74892)
+`.trim();
+}

@@ -105,25 +105,32 @@ export const App: React.FC = () => {
   };
 
   // Handler: Analyze Uploaded Prescription Image via Gemini Vision
-  const handleAnalyzePrescription = async (base64: string, mimeType: string, isDemoPreset?: boolean) => {
+  const handleAnalyzePrescription = async (base64: string, mimeType: string, isDemoPreset?: boolean, demoPrescriptionText?: string) => {
     setIsAnalyzing(true);
     setRequestError(null);
     setSafetyAlert(undefined);
 
     try {
-      const result = await analyzePrescriptionWithGemini(base64, mimeType, isDemoPreset);
+      const result = await analyzePrescriptionWithGemini(base64, mimeType, isDemoPreset, demoPrescriptionText);
       setPrescriptionAnalysis(result);
       setIsPrescriptionSource(true);
 
       if (!result.prescriptionReadable || result.medicines.length === 0) {
-        setRequestError("Couldn't analyze the prescription automatically. Please upload a clearer photo or enter medicines manually.");
+        setRequestError("Couldn't read medicines from the prescription. Please try a clearer photo or enter medicines manually.");
         return;
       }
 
       setCurrentView('prescription_review');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Prescription analysis error:', err);
-      setRequestError("Couldn't analyze the prescription automatically. Enter medicines manually or use demo prescription.");
+      const errMsg = err?.message || '';
+      if (errMsg.includes('overloaded') || errMsg.includes('503') || errMsg.includes('500')) {
+        setRequestError("Gemini AI is temporarily overloaded. Please wait 10 seconds and try again, or enter medicines manually.");
+      } else if (errMsg.includes('API key') || errMsg.includes('401') || errMsg.includes('403')) {
+        setRequestError("API key error. Please check your Gemini API key in Settings.");
+      } else {
+        setRequestError("Couldn't analyze the prescription image. Please try a clearer photo (JPG/PNG) or enter medicines manually.");
+      }
     } finally {
       setIsAnalyzing(false);
     }
