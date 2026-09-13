@@ -120,17 +120,15 @@ export const App: React.FC = () => {
         return;
       }
 
+      // Show any Gemini warning (e.g. fallback mode) as a non-blocking notice
+      if (result.warning) {
+        setSafetyAlert(result.warning);
+      }
+
       setCurrentView('prescription_review');
     } catch (err: any) {
       console.error('Prescription analysis error:', err);
-      const errMsg = err?.message || '';
-      if (errMsg.includes('overloaded') || errMsg.includes('503') || errMsg.includes('500')) {
-        setRequestError("Gemini AI is temporarily overloaded. Please wait 10 seconds and try again, or enter medicines manually.");
-      } else if (errMsg.includes('API key') || errMsg.includes('401') || errMsg.includes('403')) {
-        setRequestError("API key error. Please check your Gemini API key in Settings.");
-      } else {
-        setRequestError("Couldn't analyze the prescription image. Please try a clearer photo (JPG/PNG) or enter medicines manually.");
-      }
+      setRequestError("Couldn't analyze the prescription. Please enter medicines manually.");
     } finally {
       setIsAnalyzing(false);
     }

@@ -236,58 +236,59 @@ function parseGeminiResponse(responseText: string, source: 'gemini_vision' | 'ge
 // ─── MAIN ENTRY: ANALYZE PRESCRIPTION ────────────────────────────────────────
 
 /**
- * Analyzes a prescription using Gemini.
+ * Checks if the provided string looks like a valid Gemini API key.
+ * Valid API keys from Google AI Studio start with "AIza".
+ */
+function isValidGeminiApiKey(key: string): boolean {
+  return typeof key === 'string' && key.trim().startsWith('AIza') && key.trim().length > 20;
+}
+
+/**
+ * Analyzes a prescription using Gemini Vision (real images) or returns
+ * calibrated synthetic data (demo preset / no valid API key).
  *
- * - If isDemoPreset: sends the SVG text directly to Gemini as TEXT so Gemini
- *   reads the actual prescription text content → returns real extraction.
- * - If real image: sends as vision (multimodal) call.
- * - Falls back to demo synthetic ONLY when no API key is available.
+ * - isDemoPreset=true → returns synthetic result instantly (no API call needed)
+ * - Real image with valid AIza... key → Gemini Vision multimodal call
+ * - Real image with invalid/missing key → falls back gracefully to synthetic
  */
 export async function analyzePrescriptionWithGemini(
   base64Data: string,
   mimeType: string,
   isDemoPreset: boolean = false,
-  demoPrescriptionText?: string // SVG/text content of demo prescription
+  demoPrescriptionText?: string
 ): Promise<PrescriptionAnalysisResult> {
-  const apiKey = getStoredGeminiApiKey();
 
-  if (!apiKey) {
-    console.log('[MediRush Vision] No Gemini API key found. Using calibrated synthetic prescription extraction.');
+  // ── PATH A: Demo preset → return calibrated synthetic instantly ──
+  // No Gemini call needed — the synthetic data perfectly matches the demo pharmacy network
+  if (isDemoPreset) {
+    console.log('[MediRush Vision] Demo preset: returning calibrated synthetic prescription result.');
     return getDemoSyntheticPrescriptionResult(false);
   }
 
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-2.5-flash',
-    generationConfig: {
-      responseMimeType: 'application/json',
-      temperature: 0.05,
-    },
-  });
+  // ── PATH B: Real image upload → try Gemini Vision ──
+  const apiKey = getStoredGeminiApiKey();
 
-  // ── PATH A: Demo preset → text-based extraction (no image bytes needed) ──
-  if (isDemoPreset && demoPrescriptionText) {
-    try {
-      console.log('[MediRush Vision] Demo preset: sending prescription text to Gemini for real extraction.');
-      const textPrompt = `${EXTRACTION_PROMPT}
-
-Here is the prescription text content to analyze:
-${demoPrescriptionText}`;
-
-      const response = await model.generateContent(textPrompt);
-      const responseText = response.response.text();
-      console.log('[MediRush Vision] Demo text extraction response:', responseText.slice(0, 200));
-      return parseGeminiResponse(responseText, 'gemini_text');
-    } catch (err) {
-      console.warn('[MediRush Vision] Demo text extraction failed:', err);
-      // For demo, fall back to synthetic
-      return getDemoSyntheticPrescriptionResult(false);
-    }
+  // Validate key format before making any API call
+  if (!apiKey || !isValidGeminiApiKey(apiKey)) {
+    console.log('[MediRush Vision] No valid Gemini API key (must start with AIza). Using synthetic fallback for real upload.');
+    // Return synthetic with a note that it's demo mode
+    const result = getDemoSyntheticPrescriptionResult(false);
+    result.notes = 'Demo mode: Add a valid Gemini API key (from aistudio.google.com) to analyze your prescription image.';
+    result.warning = 'Live Gemini Vision requires a valid API key. Showing demo prescription data.';
+    return result;
   }
 
-  // ── PATH B: Real image upload → Gemini Vision multimodal call ──
   try {
     console.log('[MediRush Vision] Sending real prescription image to Gemini Vision...');
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash',
+      generationConfig: {
+        responseMimeType: 'application/json',
+        temperature: 0.05,
+      },
+    });
+
     const imagePart = {
       inlineData: {
         data: base64Data,
@@ -301,8 +302,26 @@ ${demoPrescriptionText}`;
     return parseGeminiResponse(responseText, 'gemini_vision');
 
   } catch (err: any) {
-    console.error('[MediRush Vision] Gemini Vision error:', err?.message || err);
-    // Re-throw so the UI can show a real error message instead of silently showing demo data
-    throw err;
+    const errMsg = err?.message || String(err);
+    console.error('[MediRush Vision] Gemini Vision error:', errMsg);
+
+    // On auth / quota / server errors, fall back gracefully instead of crashing
+    if (errMsg.includes('401') || errMsg.includes('403') || errMsg.includes('Unauthorized') || errMsg.includes('ACCESS_TOKEN')) {
+      console.warn('[MediRush Vision] Auth error — API key may be invalid. Returning synthetic fallback.');
+      const result = getDemoSyntheticPrescriptionResult(false);
+      result.warning = 'Could not authenticate with Gemini. Showing demo prescription data. Please verify your API key.';
+      return result;
+    }
+
+    if (errMsg.includes('503') || errMsg.includes('overloaded') || errMsg.includes('500')) {
+      const result = getDemoSyntheticPrescriptionResult(false);
+      result.warning = 'Gemini is temporarily busy. Showing demo prescription. Try again in a few seconds.';
+      return result;
+    }
+
+    // For other errors (network, parse), fall back to demo
+    const result = getDemoSyntheticPrescriptionResult(false);
+    result.warning = 'Could not analyze the image. Showing demo prescription data.';
+    return result;
   }
 }
