@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
 import { 
   CheckCircle2, 
   Sparkles, 
@@ -53,6 +54,25 @@ export const UnderstandingPage: React.FC<UnderstandingPageProps> = ({
   // Show developer contract preview toggle
   const [showJsonPreview, setShowJsonPreview] = useState(false);
 
+  // Animated optimization steps
+  const [optStep, setOptStep] = useState(1);
+
+  useEffect(() => {
+    if (isOptimizing) {
+      setOptStep(1);
+      const t1 = setTimeout(() => setOptStep(2), 250);
+      const t2 = setTimeout(() => setOptStep(3), 550);
+      const t3 = setTimeout(() => setOptStep(4), 850);
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+        clearTimeout(t3);
+      };
+    } else {
+      setOptStep(1);
+    }
+  }, [isOptimizing]);
+
   // Edit medicine card handler
   const startEditing = (med: MedicineItem) => {
     setEditingId(med.id);
@@ -60,6 +80,7 @@ export const UnderstandingPage: React.FC<UnderstandingPageProps> = ({
     setEditQty(med.quantity);
     setEditUnit(med.unit || 'strip');
   };
+
 
   const saveEdit = (id: string) => {
     if (!editName.trim()) return;
@@ -132,7 +153,61 @@ export const UnderstandingPage: React.FC<UnderstandingPageProps> = ({
   };
 
   return (
-    <div className="max-w-3xl mx-auto py-6 space-y-8 animate-fadeIn">
+    <div className="max-w-3xl mx-auto py-6 space-y-8 animate-fadeIn relative">
+      {/* Optimization Loading Overlay */}
+      {isOptimizing && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-100 space-y-6 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-[#1565C0] text-white flex items-center justify-center mx-auto shadow-lg shadow-blue-500/25">
+              <Sparkles className="w-8 h-8 animate-spin-slow" />
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="text-xl font-bold font-['Outfit'] text-slate-900">
+                Finding the fastest way to fulfil your request...
+              </h3>
+              <p className="text-xs text-slate-500">
+                Evaluating combinatorial pharmacy routes across local network
+              </p>
+            </div>
+
+            <div className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200 text-left">
+              <div className="flex items-center justify-between text-xs">
+                <span className={`font-semibold flex items-center gap-2 ${optStep >= 1 ? 'text-[#1565C0]' : 'text-slate-400'}`}>
+                  {optStep >= 1 ? <Check className="w-4 h-4 text-emerald-600" /> : <div className="w-2 h-2 rounded-full bg-slate-300 ml-1" />}
+                  Reading medicine requirements
+                </span>
+                {optStep >= 1 && <span className="text-[10px] text-emerald-600 font-bold">Done</span>}
+              </div>
+
+              <div className="flex items-center justify-between text-xs">
+                <span className={`font-semibold flex items-center gap-2 ${optStep >= 2 ? 'text-[#1565C0]' : 'text-slate-400'}`}>
+                  {optStep >= 2 ? <Check className="w-4 h-4 text-emerald-600" /> : <div className="w-2 h-2 rounded-full bg-slate-300 ml-1" />}
+                  Checking pharmacy availability
+                </span>
+                {optStep >= 2 && <span className="text-[10px] text-emerald-600 font-bold">Done</span>}
+              </div>
+
+              <div className="flex items-center justify-between text-xs">
+                <span className={`font-semibold flex items-center gap-2 ${optStep >= 3 ? 'text-[#1565C0]' : 'text-slate-400'}`}>
+                  {optStep >= 3 ? <Check className="w-4 h-4 text-emerald-600" /> : <div className="w-2 h-2 rounded-full bg-slate-300 ml-1" />}
+                  Comparing fulfilment plans
+                </span>
+                {optStep >= 3 && <span className="text-[10px] text-emerald-600 font-bold">Done</span>}
+              </div>
+
+              <div className="flex items-center justify-between text-xs">
+                <span className={`font-semibold flex items-center gap-2 ${optStep >= 4 ? 'text-[#1565C0]' : 'text-slate-400'}`}>
+                  {optStep >= 4 ? <Check className="w-4 h-4 text-emerald-600" /> : <div className="w-2 h-2 rounded-full bg-slate-300 ml-1" />}
+                  Selecting the fastest complete plan
+                </span>
+                {optStep >= 4 && <span className="text-[10px] text-emerald-600 font-bold">Optimal</span>}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header section */}
       <div className="text-center space-y-3">
         <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-50 text-[#2E7D32] text-xs font-bold border border-emerald-200 shadow-2xs">
@@ -146,6 +221,7 @@ export const UnderstandingPage: React.FC<UnderstandingPageProps> = ({
           Please review and edit the extracted medicine requirements. Your confirmation ensures 100% accuracy before routing to the fulfilment engine.
         </p>
       </div>
+
 
       {/* Safety Alert if emergency or clinical query */}
       {safetyAlert && (

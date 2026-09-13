@@ -5,7 +5,7 @@ import { LandingPage } from './pages/LandingPage';
 import { RequestPage } from './pages/RequestPage';
 import { UnderstandingPage } from './pages/UnderstandingPage';
 import { ResultsPage } from './pages/ResultsPage';
-import { TrackingPage } from './pages/TrackingPage';
+import { OrderSummaryPage } from './pages/OrderSummaryPage';
 
 import { 
   MedicineItem, 
@@ -18,11 +18,10 @@ import { demoPharmacyProvider, DEMO_USER_LOCATION } from './services/pharmacy/de
 import { extractMedicinesWithAI } from './services/ai/geminiService';
 import { runSmartFulfilmentEngine } from './services/fulfilment/smartFulfilmentEngine';
 import { EngineResult } from './services/fulfilment/types';
-import { persistOrderRequest } from './services/supabase/client';
 
 export const App: React.FC = () => {
   // Navigation View State
-  const [currentView, setCurrentView] = useState<'home' | 'request' | 'understanding' | 'results' | 'tracking'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'request' | 'understanding' | 'results' | 'order_summary'>('home');
 
   // Domain Data State
   const [allPharmacies, setAllPharmacies] = useState<Pharmacy[]>([]);
@@ -37,7 +36,6 @@ export const App: React.FC = () => {
   // Engine Optimization Result State
   const [confirmedRequest, setConfirmedRequest] = useState<StructuredMedicineRequest | null>(null);
   const [engineResult, setEngineResult] = useState<EngineResult | null>(null);
-  const [orderId, setOrderId] = useState<string>('');
 
   // Loading States
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -99,17 +97,20 @@ export const App: React.FC = () => {
     }
   };
 
-  // Handler: User Confirms Medicines -> Run Smart Fulfilment Engine
+  // Handler: User Confirms Medicines -> Run Smart Fulfilment Engine with smooth loading state
   const handleConfirmAndOptimize = async (structuredReq: StructuredMedicineRequest) => {
     setIsOptimizing(true);
     setConfirmedRequest(structuredReq);
 
     try {
-      // Ensure latest pharmacies are loaded from provider
+      // 1. Ensure latest pharmacies are loaded from provider
       const pharmacies = await demoPharmacyProvider.getPharmacies();
       setAllPharmacies(pharmacies);
 
-      // Run deterministic Smart Fulfilment Engine
+      // 2. Allow 1 second for the 4-step loading state to animate smoothly
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // 3. Run deterministic Smart Fulfilment Engine
       const result = runSmartFulfilmentEngine(
         {
           medicines: structuredReq.medicines,
@@ -119,7 +120,7 @@ export const App: React.FC = () => {
         pharmacies
       );
 
-      console.log('[MediRush Engine] Optimization Complete:', result);
+      console.log('[MediRush Engine] Optimization Result:', result);
 
       setEngineResult(result);
       setCurrentView('results');
@@ -128,56 +129,6 @@ export const App: React.FC = () => {
     } finally {
       setIsOptimizing(false);
     }
-  };
-
-  // Handler: Place Order & Dispatch Couriers
-  const handlePlaceOrder = async () => {
-    if (!engineResult || !engineResult.bestPlan) return;
-    const legacyPlan = {
-      planId: engineResult.bestPlan.planId,
-      selectedPharmacies: engineResult.bestPlan.pharmacies.map(p => ({
-        pharmacy: {
-          id: p.pharmacyId,
-          name: p.pharmacyName,
-          brand: 'Network Partner',
-          address: p.address,
-          lat: p.latitude,
-          lng: p.longitude,
-          distanceKm: p.distanceKm,
-          prepTimeMin: p.preparationTimeMinutes,
-          deliveryTimeMin: p.deliveryTimeMinutes,
-          totalEtaMin: p.totalTimeMinutes,
-          isOpen: true,
-          rating: 4.8,
-          phone: '+91 80 0000 0000',
-          tagline: '',
-          inventory: [],
-        },
-        medicinesCovered: p.allocatedMedicines.map((m, i) => ({
-          id: `m_${i}`,
-          name: m.name,
-          quantity: m.quantity,
-          unit: m.unit,
-          urgency: 'urgent' as const,
-        })),
-        prepTimeMin: p.preparationTimeMinutes,
-        deliveryTimeMin: p.deliveryTimeMinutes,
-        totalEtaMin: p.totalTimeMinutes,
-        subtotal: 0,
-      })),
-      allCovered: true,
-      coveredMedicines: medicines,
-      uncoveredMedicines: [],
-      estimatedTotalTimeMin: engineResult.bestPlan.estimatedCompletionMinutes,
-      totalDistanceKm: engineResult.bestPlan.totalDistanceKm,
-      totalCost: 350,
-      pharmacyCount: engineResult.bestPlan.pharmacyCount,
-      efficiencyScore: 98,
-    };
-
-    const { orderId: newOrderId } = await persistOrderRequest(medicines, legacyPlan as any);
-    setOrderId(newOrderId);
-    setCurrentView('tracking');
   };
 
   // Handler: Select Demo Scenario from Landing Page
@@ -202,7 +153,7 @@ export const App: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-[#F5F9FF] text-slate-900 selection:bg-blue-600 selection:text-white">
       {/* Top Application Header */}
       <Header
-        currentView={currentView}
+        currentView={currentView === 'order_summary' ? 'results' : currentView}
         onNavigate={(view) => {
           if (view === 'home') handleResetFlow();
           else setCurrentView(view);
@@ -250,21 +201,19 @@ export const App: React.FC = () => {
             engineResult={engineResult}
             allPharmacies={allPharmacies}
             userLocation={DEMO_USER_LOCATION}
-            onPlaceOrder={handlePlaceOrder}
+            urgency={confirmedRequest?.urgency || urgency}
+            onContinueToOrder={() => setCurrentView('order_summary')}
             onModifyRequest={() => setCurrentView('understanding')}
             onRetryWithAlternativeNetwork={() => setCurrentView('request')}
           />
         )}
 
-        {currentView === 'tracking' && engineResult?.bestPlan && (
-          <TrackingPage
-            orderId={orderId || 'MDR-948210'}
+        {currentView === 'order_summary' && engineResult?.bestPlan && (
+          <OrderSummaryPage
             plan={engineResult.bestPlan}
-            medicines={medicines}
-            onNewOrder={() => {
-              handleResetFlow();
-              setCurrentView('request');
-            }}
+            urgency={confirmedRequest?.urgency || urgency}
+            onBackToResults={() => setCurrentView('results')}
+            onNewOrder={handleResetFlow}
           />
         )}
       </main>

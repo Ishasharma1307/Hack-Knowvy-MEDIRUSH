@@ -70,4 +70,6 @@ export interface EngineResult {
   speedupPercentage: number;
   missingMedicines: string[];
   whyThisCombination: string;
+  topPlans?: FulfilmentPlan[];
 }
+

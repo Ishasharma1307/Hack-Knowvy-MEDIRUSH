@@ -248,7 +248,7 @@ export function runSmartFulfilmentEngine(
   }
 
   const bestPlan: FulfilmentPlan = {
-    planId: `plan_${Date.now()}`,
+    planId: `plan_${Date.now()}_best`,
     allMedicinesCovered: true,
     medicinesCoveredCount: medicines.length,
     totalMedicinesRequestedCount: medicines.length,
@@ -263,6 +263,23 @@ export function runSmartFulfilmentEngine(
     missingMedicines: [],
   };
 
+  // Convert top 4 distinct valid plans for the "Plans Analyzed" comparison feature
+  const topPlans: FulfilmentPlan[] = validPlans.slice(0, 4).map((vp, idx) => ({
+    planId: `plan_analyzed_${idx}`,
+    allMedicinesCovered: true,
+    medicinesCoveredCount: medicines.length,
+    totalMedicinesRequestedCount: medicines.length,
+    pharmacies: vp.pharmacySegments,
+    allocations: vp.allocations,
+    estimatedCompletionMinutes: vp.completionTimeMinutes,
+    coordinationPenaltyMinutes: vp.coordinationPenaltyMinutes,
+    totalDistanceKm: vp.totalDistanceKm,
+    pharmacyCount: vp.pharmacySegments.length,
+    score: vp.score,
+    explanation: `${vp.pharmacySegments.map(p => p.pharmacyName).join(' + ')} (~${vp.completionTimeMinutes} min)`,
+    missingMedicines: [],
+  }));
+
   return {
     status: 'success',
     bestPlan,
@@ -271,5 +288,7 @@ export function runSmartFulfilmentEngine(
     speedupPercentage,
     missingMedicines: [],
     whyThisCombination,
+    topPlans,
   };
 }
+
