@@ -82,7 +82,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, onReset
           {/* AI Status Badge — just a display, no click */}
           <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-[#2E7D32] border border-emerald-200">
             <Sparkles className="w-3.5 h-3.5 text-emerald-600 animate-spin-slow" />
-            <span>Gemini 2.5 Active</span>
+            <span>Gemini AI Active</span>
           </div>
         </div>
       </div>

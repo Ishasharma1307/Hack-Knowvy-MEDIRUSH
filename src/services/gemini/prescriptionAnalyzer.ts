@@ -235,12 +235,10 @@ function parseGeminiResponse(responseText: string, source: 'gemini_vision' | 'ge
 
 // ─── MAIN ENTRY: ANALYZE PRESCRIPTION ────────────────────────────────────────
 
-/**
- * Checks if the provided string looks like a valid Gemini API key.
- * Valid API keys from Google AI Studio start with "AIza".
- */
-function isValidGeminiApiKey(key: string): boolean {
-  return typeof key === 'string' && key.trim().startsWith('AIza') && key.trim().length > 20;
+export function isValidGeminiApiKey(key: string): boolean {
+  if (typeof key !== 'string') return false;
+  const trimmed = key.trim();
+  return (trimmed.startsWith('AIza') || trimmed.startsWith('AQ.')) && trimmed.length > 20;
 }
 
 /**
@@ -248,7 +246,7 @@ function isValidGeminiApiKey(key: string): boolean {
  * calibrated synthetic data (demo preset / no valid API key).
  *
  * - isDemoPreset=true → returns synthetic result instantly (no API call needed)
- * - Real image with valid AIza... key → Gemini Vision multimodal call
+ * - Real image with valid AIza / AQ key → Gemini Vision multimodal call
  * - Real image with invalid/missing key → falls back gracefully to synthetic
  */
 export async function analyzePrescriptionWithGemini(
@@ -270,7 +268,7 @@ export async function analyzePrescriptionWithGemini(
 
   // Validate key format before making any API call
   if (!apiKey || !isValidGeminiApiKey(apiKey)) {
-    console.log('[MediRush Vision] No valid Gemini API key (must start with AIza). Using synthetic fallback for real upload.');
+    console.log('[MediRush Vision] No valid Gemini API key found. Using synthetic fallback for real upload.');
     // Return synthetic with a note that it's demo mode
     const result = getDemoSyntheticPrescriptionResult(false);
     result.notes = 'Demo mode: Add a valid Gemini API key (from aistudio.google.com) to analyze your prescription image.';
@@ -279,13 +277,13 @@ export async function analyzePrescriptionWithGemini(
   }
 
   try {
-    console.log('[MediRush Vision] Sending real prescription image to Gemini Vision...');
+    console.log('[MediRush Vision] Sending real prescription image to Gemini Vision (gemini-3.6-flash)...');
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.6-flash',
       generationConfig: {
         responseMimeType: 'application/json',
-        temperature: 0.05,
+        temperature: 0.1,
       },
     });
 

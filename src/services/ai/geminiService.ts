@@ -5,12 +5,12 @@ import { parseMedicineRequestOffline, DEMO_PRESET_MEDICINES } from './fallbackPa
 const STORAGE_KEY_API_KEY = 'medirush_gemini_api_key';
 
 export function getStoredGeminiApiKey(): string {
-  // 1. User-saved key in browser localStorage
-  const localKey = localStorage.getItem(STORAGE_KEY_API_KEY);
-  if (localKey && localKey.trim()) return localKey.trim();
-  // 2. Key from .env file (VITE_GEMINI_API_KEY, gitignored)
-  const envKey = (import.meta.env.VITE_GEMINI_API_KEY as string) || '';
-  return envKey.trim();
+  const envKey = ((import.meta.env.VITE_GEMINI_API_KEY as string) || '').trim();
+  const localKey = (localStorage.getItem(STORAGE_KEY_API_KEY) || '').trim();
+  if (localKey && (localKey.startsWith('AIza') || localKey.startsWith('AQ.')) && localKey.length > 20) {
+    return localKey;
+  }
+  return envKey;
 }
 
 export function saveGeminiApiKey(key: string): void {
@@ -142,7 +142,7 @@ export async function extractMedicinesWithAI(prompt: string): Promise<Extraction
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.6-flash',
       generationConfig: {
         responseMimeType: 'application/json',
         temperature: 0.1,
@@ -236,7 +236,7 @@ export async function explainFulfilmentPlan(
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.6-flash',
       generationConfig: {
         temperature: 0.3,
         maxOutputTokens: 180,
