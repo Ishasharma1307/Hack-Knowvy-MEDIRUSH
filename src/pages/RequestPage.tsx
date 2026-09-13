@@ -208,7 +208,7 @@ export const RequestPage: React.FC<RequestPageProps> = ({
 
             <div className="text-center space-y-1.5">
               <h3 className="text-xl font-bold font-['Outfit'] text-slate-900">
-                Understanding your request...
+                Understanding your medicine request...
               </h3>
               <p className="text-xs text-slate-500">
                 Gemini is extracting clinical drug taxonomy and quantities
@@ -263,62 +263,78 @@ export const RequestPage: React.FC<RequestPageProps> = ({
                     setPromptText(e.target.value);
                     if (validationError) setValidationError(null);
                   }}
-                  placeholder="e.g. I need Dolo 650, Pantoprazole and Azithromycin urgently. Doctor gave me a prescription for fever and throat infection."
+                  placeholder="Example: I need Dolo 650, Pantoprazole and ORS urgently."
                   className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-[#1565C0] focus:bg-white transition resize-none leading-relaxed"
                 />
               </div>
 
-              {/* Quick Hackathon Test Cases Chips */}
+              {/* Demo Quick Requests Chips (Prompt 5 Section 7) */}
               <div className="space-y-2 pt-1">
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                  Quick Hackathon Test Cases:
+                  Demo Quick Requests:
                 </span>
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
                     onClick={() => {
-                      setPromptText("I need Dolo 650 and Pantoprazole urgently.");
+                      setPromptText("I need Dolo 650, Pantoprazole, Azithromycin, ORS and Cetirizine urgently.");
                       setUrgency("urgent");
+                      if (validationError) setValidationError(null);
                     }}
-                    className="text-xs px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-[#1565C0] text-slate-700 font-medium border border-slate-200 transition"
+                    className="text-xs px-3 py-1.5 rounded-xl bg-blue-50 text-[#1565C0] font-bold border border-blue-200 hover:bg-blue-100 transition flex items-center gap-1.5 cursor-pointer"
                   >
-                    Test 1: Dolo + Pantoprazole Urgently
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>5-medicine urgent request (Scenario A)</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => {
-                      setPromptText("I need 2 strips of Dolo 650.");
+                      setPromptText("I need Dolo 650, Pantoprazole and Azithromycin.");
                       setUrgency("normal");
+                      if (validationError) setValidationError(null);
                     }}
-                    className="text-xs px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-[#1565C0] text-slate-700 font-medium border border-slate-200 transition"
+                    className="text-xs px-3 py-1.5 rounded-xl bg-emerald-50 text-[#2E7D32] font-semibold border border-emerald-200 hover:bg-emerald-100 transition cursor-pointer"
                   >
-                    Test 2: 2 Strips of Dolo 650
+                    3 medicines
                   </button>
 
                   <button
                     type="button"
                     onClick={() => {
-                      setPromptText("I need my prescribed medicines today.");
-                      setUrgency("urgent");
+                      setPromptText("I need Dolo 650, Pantoprazole and Azithromycin.");
+                      setUrgency("normal");
+                      if (validationError) setValidationError(null);
                     }}
-                    className="text-xs px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-amber-50 hover:text-amber-800 text-slate-700 font-medium border border-slate-200 transition"
+                    className="text-xs px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium border border-slate-200 transition cursor-pointer"
                   >
-                    Test 3: Vague Request (Check Safety)
+                    Single pharmacy request
                   </button>
 
                   <button
                     type="button"
                     onClick={() => {
-                      setPromptText("I need Dolo 650, Azithromycin 500mg, Pantoprazole 40mg, Montair-LC, and Amoxicillin-Clav 625mg urgently.");
+                      setPromptText("I need Dolo 650, Pantoprazole, and RareSpecialtyDrugX.");
                       setUrgency("urgent");
+                      if (validationError) setValidationError(null);
                     }}
-                    className="text-xs px-3 py-1.5 rounded-xl bg-blue-50 text-[#1565C0] font-semibold border border-blue-200 transition flex items-center gap-1"
+                    className="text-xs px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 font-medium border border-amber-200 transition cursor-pointer"
                   >
-                    <Sparkles className="w-3 h-3 text-[#1565C0]" />
-                    Benchmark 5-Medicine Request
+                    Unavailable drug (Scenario C)
                   </button>
                 </div>
+              </div>
+
+              {/* Or add medicines manually toggle */}
+              <div className="pt-2 text-center sm:text-left">
+                <button
+                  type="button"
+                  onClick={() => setEntryMode('manual')}
+                  className="text-xs font-bold text-[#1565C0] hover:underline cursor-pointer inline-flex items-center gap-1"
+                >
+                  <span>Or add medicines manually (name, quantity, unit)</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
               </div>
             </div>
           ) : (
@@ -485,7 +501,7 @@ export const RequestPage: React.FC<RequestPageProps> = ({
               className="w-full py-4 rounded-2xl bg-[#1565C0] hover:bg-[#0D47A1] text-white font-bold text-base shadow-lg shadow-blue-600/25 hover:shadow-blue-600/35 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <Sparkles className="w-5 h-5 text-blue-200" />
-              <span>Analyze Request</span>
+              <span>Understand my request</span>
             </button>
           </div>
         </form>

@@ -38,7 +38,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, onReset
                 </span>
               </div>
               <p className="text-[11px] font-medium text-slate-500 -mt-1 hidden sm:block">
-                Intelligent Multi-Pharmacy Fulfilment
+                Smart medicine fulfilment
               </p>
             </div>
           </div>
@@ -56,34 +56,43 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, onReset
                   : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
               }`}
             >
-              Overview
+              Home
             </button>
             <button
-              onClick={() => onNavigate('request')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                currentView !== 'home'
-                  ? 'bg-[#1565C0] text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-              }`}
+              onClick={() => {
+                if (currentView !== 'home') {
+                  onNavigate('home');
+                }
+                setTimeout(() => {
+                  const el = document.getElementById('how-it-works');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+              }}
+              className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-white/50 transition-all"
             >
-              <Pill className="w-3.5 h-3.5" />
-              Order Medicines
+              How it works
             </button>
           </nav>
 
-          {/* Status & Actions */}
+          {/* Status & Primary Action */}
           <div className="flex items-center gap-2.5">
+            {/* Primary Action Button */}
+            <button
+              onClick={() => onNavigate('request')}
+              className="px-4 py-2 rounded-xl bg-[#1565C0] hover:bg-[#0D47A1] text-white text-xs font-bold shadow-sm shadow-blue-500/20 hover:shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <Pill className="w-3.5 h-3.5" />
+              <span>Find medicines</span>
+            </button>
+
             {/* AI Status Badge */}
             <button
               onClick={() => setIsSettingsOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-[#2E7D32] border border-emerald-200 hover:bg-emerald-100/70 transition"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-[#2E7D32] border border-emerald-200 hover:bg-emerald-100/70 transition"
               title="Click to view AI engine & API keys"
             >
               <Sparkles className="w-3.5 h-3.5 text-emerald-600 animate-spin-slow" />
-              <span className="hidden sm:inline">
-                {hasCustomKey ? 'Gemini 2.5 Active' : 'Gemini Ready'}
-              </span>
-              <span className="sm:hidden">AI</span>
+              <span>{hasCustomKey ? 'Gemini 2.5 Active' : 'Gemini Ready'}</span>
             </button>
 
             {/* Config modal trigger */}

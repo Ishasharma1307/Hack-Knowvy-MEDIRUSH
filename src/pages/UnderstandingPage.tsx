@@ -251,13 +251,18 @@ export const UnderstandingPage: React.FC<UnderstandingPageProps> = ({
                 {urgency}
               </span>
             </div>
-            <p className="text-[11px] text-slate-400">
-              Extraction: {
-                extractionSource === 'gemini' ? 'Gemini 2.5 Flash Structured JSON' :
-                extractionSource === 'demo' ? 'Predefined Hackathon Demo Dataset' :
-                'Clinical NLP Rules Engine (Offline Failsafe)'
-              }
-            </p>
+            <div className="text-[11px] pt-0.5">
+              {extractionSource === 'gemini' ? (
+                <span className="inline-flex items-center gap-1 font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                  <Sparkles className="w-3 h-3 text-[#1565C0]" />
+                  Gemini structured understanding
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                  AI unavailable — demo interpretation used
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

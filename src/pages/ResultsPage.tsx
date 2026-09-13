@@ -145,25 +145,25 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-rose-800 bg-rose-100 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                  Network Stock Constraint
+                  Network Stock Notice
                 </span>
-                <span className="text-xs text-slate-400">Strict Safety Enforced</span>
+                <span className="text-xs text-slate-400">Deterministic Coverage Check</span>
               </div>
               <h2 className="text-2xl font-black font-['Outfit'] text-slate-900 mt-0.5">
-                Complete fulfilment isn't currently available
+                Complete fulfilment isn't available yet
               </h2>
             </div>
           </div>
 
           <p className="text-sm text-slate-600 leading-relaxed">
-            MediRush strictly enforces <strong>100% complete prescription coverage</strong>. Because some requested medicines are not available in sufficient stock across open pharmacies in your area, an incomplete order cannot be dispatched.
+            We couldn't find a pharmacy combination that covers every requested medicine across available local pharmacies.
           </p>
 
-          {/* Missing Medicines List */}
+          {/* Unavailable Medicines List */}
           <div className="space-y-3 bg-rose-50/70 border border-rose-200 rounded-2xl p-5">
             <h4 className="text-xs font-bold uppercase tracking-wider text-rose-800 flex items-center gap-1.5">
               <AlertTriangle className="w-4 h-4 text-rose-600" />
-              <span>Missing Medicines Across Local Network:</span>
+              <span>Unavailable medicines</span>
             </h4>
             <div className="space-y-2">
               {missingMedicines.map((med, idx) => (
@@ -175,7 +175,7 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
                     <span className="text-rose-600 font-bold">✕</span>
                     <span>{med}</span>
                   </span>
-                  <span className="text-[11px] font-normal text-rose-600">Out of Stock in Local Network</span>
+                  <span className="text-[11px] font-normal text-rose-600">Unavailable in local network</span>
                 </div>
               ))}
             </div>
@@ -197,18 +197,16 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
               className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-[#1565C0] hover:bg-[#0D47A1] text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" />
-              <span>Edit Medicine Request</span>
+              <span>Edit request</span>
             </button>
 
-            {onRetryWithAlternativeNetwork && (
-              <button
-                type="button"
-                onClick={onRetryWithAlternativeNetwork}
-                className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs border border-slate-200 transition flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <span>Try Another Pharmacy Network</span>
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={onRetryWithAlternativeNetwork || onModifyRequest}
+              className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs border border-slate-200 transition flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>Try again</span>
+            </button>
           </div>
         </div>
       </div>
@@ -280,15 +278,16 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
         </div>
       </div>
 
-      {/* Hero Result Banner (Prompt 4 Section 2) */}
+      {/* Hero Result Banner (Prompt 4 Section 2 & Prompt 5 Section 10/11) */}
       <div className="bg-white rounded-3xl border border-emerald-200 p-6 sm:p-8 shadow-md shadow-emerald-500/5 flex flex-col sm:flex-row items-center justify-between gap-6">
         <div className="space-y-3">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-black text-emerald-800 uppercase tracking-wider bg-emerald-100 px-2.5 py-0.5 rounded-full">
               FASTEST COMPLETE FULFILMENT
             </span>
-            <span className="text-xs text-slate-400">
-              Parallel Multi-Hub
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#1565C0] bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full">
+              <Cpu className="w-3.5 h-3.5 text-[#1565C0]" />
+              Optimized by MediRush Smart Fulfilment Engine
             </span>
           </div>
           <div className="flex items-baseline gap-2">
@@ -324,7 +323,48 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
         </div>
       </div>
 
-      {/* "Why Not One Pharmacy?" Educational Tooltip / Callout (Prompt 4 Section 12) */}
+      {/* Gemini AI Explanation Section — IMMEDIATELY AFTER HERO (Prompt 5 Section 10) */}
+      <section className="bg-white rounded-3xl border border-blue-200 p-6 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+          <div className="flex items-center gap-2 text-[#1565C0]">
+            <Sparkles className="w-5 h-5 text-[#1565C0]" />
+            <h3 className="text-base font-bold font-['Outfit'] text-slate-900">
+              Why this combination?
+            </h3>
+            <span className="text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-[#1565C0] border border-blue-200 px-2 py-0.5 rounded-md">
+              AI-assisted explanation
+            </span>
+          </div>
+          <span className="text-[11px] font-bold text-slate-400">
+            Gemini understands and explains. MediRush optimizes.
+          </span>
+        </div>
+
+        {isLoadingAi ? (
+          <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100 text-xs text-slate-500 flex items-center gap-2 animate-pulse">
+            <Sparkles className="w-4 h-4 text-blue-500 animate-spin" />
+            <span>Synthesizing natural explanation...</span>
+          </div>
+        ) : (
+          <div className="space-y-3 bg-blue-50/50 p-5 rounded-2xl border border-blue-100">
+            <p className="text-sm text-slate-800 font-semibold leading-relaxed">
+              "{aiExplanation?.summary || whyThisCombination}"
+            </p>
+            {aiExplanation?.reason && (
+              <p className="text-xs text-slate-600 leading-relaxed">
+                <strong>Logistical Rationale:</strong> {aiExplanation.reason}
+              </p>
+            )}
+            {aiExplanation?.timeSavingExplanation && (
+              <p className="text-xs text-[#1565C0] font-bold">
+                • {aiExplanation.timeSavingExplanation}
+              </p>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* "Why Not One Pharmacy?" Educational Tooltip / Callout (Prompt 4 Section 12 & Prompt 5) */}
       <div className="bg-gradient-to-r from-blue-50/80 to-indigo-50/80 border border-blue-200/80 rounded-2xl p-4 shadow-2xs space-y-2">
         <div className="flex items-center justify-between cursor-pointer" onClick={() => setShowWhyNotOne(!showWhyNotOne)}>
           <div className="flex items-center gap-2 text-xs font-extrabold text-[#1565C0]">
@@ -410,13 +450,13 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
           ))}
         </div>
 
-        {/* Together Summary Callout (Prompt 4 Section 8) */}
+        {/* Together Summary Callout */}
         <div className="p-4 bg-emerald-50/80 border border-emerald-200 rounded-2xl text-center text-xs font-bold text-[#2E7D32]">
           Together, these {bestPlan.pharmacyCount} pharmacies fulfil all {bestPlan.totalMedicinesRequestedCount} medicines.
         </div>
       </div>
 
-      {/* Complete Request Coverage Section (Prompt 4 Section 9) */}
+      {/* Complete Request Coverage Section */}
       <div className="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-xs space-y-3">
         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-[#2E7D32]" />
@@ -440,47 +480,6 @@ export const ResultsPage: React.FC<ResultsPageProps> = ({
           ))}
         </div>
       </div>
-
-      {/* Gemini AI Explanation Section (Prompt 4 Section 5, 6, 7) */}
-      <section className="bg-white rounded-3xl border border-blue-200 p-6 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-          <div className="flex items-center gap-2 text-[#1565C0]">
-            <Sparkles className="w-5 h-5 text-[#1565C0]" />
-            <h3 className="text-base font-bold font-['Outfit'] text-slate-900">
-              Why this combination?
-            </h3>
-            <span className="text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-[#1565C0] border border-blue-200 px-2 py-0.5 rounded-md">
-              AI-assisted explanation
-            </span>
-          </div>
-          <span className="text-[11px] font-bold text-slate-400">
-            Gemini understands and explains. MediRush optimizes.
-          </span>
-        </div>
-
-        {isLoadingAi ? (
-          <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100 text-xs text-slate-500 flex items-center gap-2 animate-pulse">
-            <Sparkles className="w-4 h-4 text-blue-500 animate-spin" />
-            <span>Synthesizing natural explanation...</span>
-          </div>
-        ) : (
-          <div className="space-y-3 bg-blue-50/50 p-5 rounded-2xl border border-blue-100">
-            <p className="text-sm text-slate-800 font-semibold leading-relaxed">
-              "{aiExplanation?.summary || whyThisCombination}"
-            </p>
-            {aiExplanation?.reason && (
-              <p className="text-xs text-slate-600 leading-relaxed">
-                <strong>Logistical Rationale:</strong> {aiExplanation.reason}
-              </p>
-            )}
-            {aiExplanation?.timeSavingExplanation && (
-              <p className="text-xs text-[#1565C0] font-bold">
-                • {aiExplanation.timeSavingExplanation}
-              </p>
-            )}
-          </div>
-        )}
-      </section>
 
       {/* Head-to-Head Comparison Card (Prompt 4 Section 10) */}
       <section className="bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl space-y-6">

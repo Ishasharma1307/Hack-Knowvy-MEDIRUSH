@@ -58,51 +58,70 @@ export const OrderSummaryPage: React.FC<OrderSummaryPageProps> = ({
           </div>
 
           <div className="space-y-2">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Order #{orderId}
-            </span>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-black uppercase tracking-wider">
+              <span>✓ Request confirmed</span>
+            </div>
             <h1 className="text-3xl sm:text-4xl font-black font-['Outfit'] text-slate-900 tracking-tight">
-              Your MediRush request is confirmed
+              Your medicine fulfilment plan has been created.
             </h1>
-            <p className="text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
-              Dispatches have been queued across our local pharmacy network for concurrent preparation.
+            <p className="text-xs text-slate-400">
+              Order #{orderId} • Parallel express dispatch
             </p>
           </div>
 
-          {/* Verification steps confirmed */}
-          <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200/80 space-y-3 text-left">
-            <div className="flex items-center gap-3 text-xs font-bold text-slate-800">
-              <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] shrink-0">✓</span>
-              <span>Complete medicine request identified ({plan.totalMedicinesRequestedCount} items)</span>
+          {/* Quick Metrics: 5/5 medicines, 2 pharmacies, 14 min completion */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
+              <span className="text-2xl font-black font-['Outfit'] text-slate-900 block">
+                {plan.medicinesCoveredCount}/{plan.totalMedicinesRequestedCount}
+              </span>
+              <span className="text-[11px] font-semibold text-slate-500">Medicines Covered</span>
             </div>
-            <div className="flex items-center gap-3 text-xs font-bold text-slate-800">
-              <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] shrink-0">✓</span>
-              <span>Pharmacy allocation created ({plan.pharmacyCount} partner hubs)</span>
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
+              <span className="text-2xl font-black font-['Outfit'] text-slate-900 block">
+                {plan.pharmacyCount}
+              </span>
+              <span className="text-[11px] font-semibold text-slate-500">Pharmacies Selected</span>
             </div>
-            <div className="flex items-center gap-3 text-xs font-bold text-slate-800">
-              <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] shrink-0">✓</span>
-              <span>Fulfilment plan optimized for fastest parallel delivery</span>
+            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl">
+              <span className="text-2xl font-black font-['Outfit'] text-[#2E7D32] block">
+                {plan.estimatedCompletionMinutes} min
+              </span>
+              <span className="text-[11px] font-bold text-emerald-800">Estimated Completion</span>
             </div>
           </div>
 
-          {/* Prominent ETA Callout */}
-          <div className="p-6 bg-emerald-50/70 border border-emerald-200 rounded-3xl space-y-1">
-            <div className="text-xs font-bold text-emerald-800 uppercase tracking-wider">
-              Estimated Completion Time
+          {/* Selected Pharmacies Breakdown */}
+          <div className="space-y-3 bg-slate-50 p-5 rounded-2xl border border-slate-200/80 text-left">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+              <Store className="w-4 h-4 text-[#1565C0]" />
+              <span>Selected Pharmacies & Dispatches:</span>
+            </h3>
+            <div className="space-y-2">
+              {plan.pharmacies.map((pharm, idx) => (
+                <div
+                  key={idx}
+                  className="p-3 bg-white border border-slate-200 rounded-xl flex items-center justify-between text-xs shadow-2xs"
+                >
+                  <div>
+                    <span className="font-bold text-slate-900 block">{pharm.pharmacyName}</span>
+                    <span className="text-[11px] text-slate-400">
+                      {pharm.allocatedMedicines.map(m => `${m.name} (${m.quantity} ${m.unit})`).join(', ')}
+                    </span>
+                  </div>
+                  <span className="font-black text-[#2E7D32] shrink-0">
+                    ~{pharm.totalTimeMinutes} min
+                  </span>
+                </div>
+              ))}
             </div>
-            <div className="text-4xl sm:text-5xl font-black font-['Outfit'] text-[#2E7D32]">
-              {plan.estimatedCompletionMinutes} min
-            </div>
-            <p className="text-xs text-slate-500 pt-1">
-              Parallel dispatch from {plan.pharmacies.map(p => p.pharmacyName).join(' & ')}
-            </p>
           </div>
 
           {/* Transparent Live Partner Tracking Disclaimer */}
-          <div className="p-4 bg-slate-100/90 rounded-2xl border border-slate-200/80 text-xs text-slate-500 flex items-start gap-2.5 text-left">
-            <Bike className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+          <div className="p-4 bg-slate-100/90 rounded-2xl border border-slate-200/80 text-xs text-slate-600 flex items-start gap-2.5 text-left">
+            <Bike className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
             <p className="leading-relaxed">
-              <strong>Notice:</strong> Tracking will be available once connected to live pharmacy partners. In production, driver GPS telemetry updates in real-time.
+              <strong>Live delivery tracking will be available when MediRush is connected to pharmacy and delivery partners.</strong> Dispatches are simulated using calibrated travel and pack times.
             </p>
           </div>
 
