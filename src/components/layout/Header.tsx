@@ -1,13 +1,21 @@
 import React from 'react';
-import { Zap, Pill, Activity, Sparkles } from 'lucide-react';
+import { Zap, Pill, Activity, Sparkles, MapPin } from 'lucide-react';
 
 interface HeaderProps {
   currentView: 'home' | 'request' | 'understanding' | 'results' | 'tracking';
   onNavigate: (view: 'home' | 'request') => void;
   onReset?: () => void;
+  userLocationAddress?: string;
+  onDetectLocation?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, onReset }) => {
+export const Header: React.FC<HeaderProps> = ({ 
+  currentView, 
+  onNavigate, 
+  onReset,
+  userLocationAddress,
+  onDetectLocation,
+}) => {
   return (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
@@ -78,6 +86,18 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, onReset
             <Pill className="w-3.5 h-3.5" />
             <span>Find medicines</span>
           </button>
+
+          {/* Live User Location Badge */}
+          {userLocationAddress && (
+            <div
+              onClick={onDetectLocation}
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-blue-50 text-[#1565C0] border border-blue-200 cursor-pointer hover:bg-blue-100/80 transition"
+              title="Click to refresh your live GPS location"
+            >
+              <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <span className="truncate max-w-[150px]">{userLocationAddress}</span>
+            </div>
+          )}
 
           {/* AI Status Badge — just a display, no click */}
           <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-[#2E7D32] border border-emerald-200">

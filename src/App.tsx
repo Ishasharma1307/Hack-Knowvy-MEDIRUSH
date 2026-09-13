@@ -23,7 +23,7 @@ import { extractMedicinesWithAI } from './services/ai/geminiService';
 import { analyzePrescriptionWithGemini, PrescriptionAnalysisResult } from './services/gemini/prescriptionAnalyzer';
 import { runSmartFulfilmentEngine } from './services/fulfilment/smartFulfilmentEngine';
 import { EngineResult } from './services/fulfilment/types';
-import { getUserLocation } from './services/location/locationService';
+import { getUserLocation, UserLocationResult } from './services/location/locationService';
 import { getTopNearbyPharmacies } from './services/pharmacy/nearbyPharmacyService';
 import { mapCandidatesToInventoryPharmacies } from './services/pharmacy/pharmacyMatcher';
 import { createMedicineOrder } from './services/order/orderService';
@@ -62,18 +62,24 @@ export const App: React.FC = () => {
   const [orderCandidatesChecked, setOrderCandidatesChecked] = useState<PharmacyCandidateEvaluation[]>([]);
   const [orderNoSinglePharmacy, setOrderNoSinglePharmacy] = useState<boolean>(false);
   const [orderMissingMedicines, setOrderMissingMedicines] = useState<string[]>([]);
+  const [liveUserLocation, setLiveUserLocation] = useState<UserLocationResult | null>(null);
 
   // Loading States
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
 
-  // Initialize Pharmacies from Demo Provider
+  // Initialize Pharmacies and detect user's real location on initial load
   useEffect(() => {
-    async function loadPharmacies() {
+    async function initData() {
       const stores = await demoPharmacyProvider.getPharmacies();
       setAllPharmacies(stores);
+
+      try {
+        const detected = await getUserLocation(5000);
+        setLiveUserLocation(detected);
+      } catch (_e) {}
     }
-    loadPharmacies();
+    initData();
   }, []);
 
   // Handler: Analyze Natural Language or Manual Prescription
@@ -173,11 +179,12 @@ export const App: React.FC = () => {
       setAllPharmacies(pharmacies);
 
       // STEP 1: USER LOCATION & NEARBY DISCOVERY
-      const loc = await getUserLocation(5000);
-      setOrderPipelineDetail(`Location: ${loc.address}. Querying nearby places with Gemini & Google Maps...`);
+      const loc = await getUserLocation(6000);
+      setLiveUserLocation(loc);
+      setOrderPipelineDetail(`Location: ${loc.address}. Finding nearest pharmacies with Gemini...`);
 
       const discoveryResult = await getTopNearbyPharmacies(
-        { latitude: loc.latitude, longitude: loc.longitude },
+        { latitude: loc.latitude, longitude: loc.longitude, address: loc.address },
         5
       );
 
@@ -378,6 +385,14 @@ export const App: React.FC = () => {
           else setCurrentView(view);
         }}
         onReset={handleResetFlow}
+        userLocationAddress={liveUserLocation?.address}
+        onDetectLocation={async () => {
+          try {
+            sessionStorage.removeItem('medirush_user_real_location');
+            const loc = await getUserLocation(8000);
+            setLiveUserLocation(loc);
+          } catch (_e) {}
+        }}
       />
 
       {/* Main View Router Container */}

@@ -17,8 +17,11 @@ export function getStoredGeminiApiKey(): string {
   try {
     if (typeof import.meta !== 'undefined' && (import.meta as any).env) {
       envKey = (((import.meta as any).env.VITE_GEMINI_API_KEY as string) || '').trim();
-    } else if (typeof process !== 'undefined' && process.env) {
-      envKey = ((process.env.VITE_GEMINI_API_KEY as string) || '').trim();
+    } else {
+      const proc = typeof globalThis !== 'undefined' ? (globalThis as any).process : undefined;
+      if (proc && proc.env) {
+        envKey = ((proc.env.VITE_GEMINI_API_KEY as string) || '').trim();
+      }
     }
   } catch (_e) {}
 

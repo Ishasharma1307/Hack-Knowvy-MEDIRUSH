@@ -102,5 +102,7 @@ async function runTests() {
 
 runTests().catch(e => {
   console.error(e);
-  process.exit(1);
+  const proc = (globalThis as any).process;
+  if (proc && proc.exit) proc.exit(1);
 });
+
