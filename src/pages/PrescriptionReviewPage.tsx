@@ -454,7 +454,7 @@ export const PrescriptionReviewPage: React.FC<PrescriptionReviewPageProps> = ({
             onClick={handleConfirm}
             className="w-1/2 sm:w-auto px-7 py-3 rounded-2xl bg-[#1565C0] hover:bg-[#0D47A1] text-white font-bold text-sm shadow-md shadow-blue-500/20 hover:shadow-blue-500/30 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
           >
-            <span>Confirm medicines</span>
+            <span>Order Medicines</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>

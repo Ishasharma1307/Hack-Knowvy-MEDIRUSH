@@ -29,6 +29,7 @@ export const DEMO_PHARMACIES_DATA: Pharmacy[] = [
       { medicineName: "Dolo 650",              normalizedMedicineName: normalizeMedicineName("Dolo 650"),              availableQuantity: 100, unit: "strip",   unitPrice: 32  },
       { medicineName: "Pantoprazole",           normalizedMedicineName: normalizeMedicineName("Pantoprazole"),          availableQuantity: 60,  unit: "strip",   unitPrice: 75  },
       { medicineName: "Azithromycin",           normalizedMedicineName: normalizeMedicineName("Azithromycin"),          availableQuantity: 40,  unit: "strip",   unitPrice: 120 },
+      { medicineName: "ORS",                    normalizedMedicineName: normalizeMedicineName("ORS"),                   availableQuantity: 50,  unit: "sachet",  unitPrice: 22  },
       { medicineName: "Paracetamol 500mg",      normalizedMedicineName: normalizeMedicineName("Paracetamol 500mg"),     availableQuantity: 150, unit: "strip",   unitPrice: 20  },
       { medicineName: "Amoxicillin",            normalizedMedicineName: normalizeMedicineName("Amoxicillin"),           availableQuantity: 50,  unit: "strip",   unitPrice: 95  },
       { medicineName: "Augmentin 625mg",        normalizedMedicineName: normalizeMedicineName("Augmentin 625mg"),       availableQuantity: 45,  unit: "strip",   unitPrice: 185 },

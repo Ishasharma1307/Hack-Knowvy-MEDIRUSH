@@ -37,6 +37,199 @@ function getCombinations<T>(array: T[], maxComboSize = 4): T[][] {
 }
 
 /**
+ * Single Pharmacy Order Optimization
+ * Evaluates ONLY the provided top nearby candidate pharmacies.
+ * Checks completeness, stock levels, open status, distance, and completion time.
+ * Enforces strict ranking:
+ * 1. Filter for complete fulfilment (100% of requested items with adequate stock)
+ * 2. Rank complete candidates by:
+ *    - Operating status (must be open)
+ *    - Estimated fulfilment time (prep + delivery)
+ *    - Distance (closer pharmacy wins on ties or within 2 min difference)
+ */
+function runSinglePharmacyOptimization(
+  input: EngineInput,
+  candidatePharmacies: Pharmacy[]
+): EngineResult {
+  const { medicines, userLocation = DEMO_USER_LOCATION } = input;
+
+  if (!medicines || medicines.length === 0) {
+    return {
+      status: 'empty_request',
+      mode: 'single_pharmacy',
+      bestPlan: null,
+      baseline: null,
+      timeSavedMinutes: 0,
+      speedupPercentage: 0,
+      missingMedicines: [],
+      whyThisCombination: 'No medicines were requested.',
+    };
+  }
+
+  // Evaluate all candidates
+  const evaluatedCandidates = candidatePharmacies.map((pharm) => {
+    const covered: RequestedMedicine[] = [];
+    const missing: string[] = [];
+
+    for (const req of medicines) {
+      if (pharmacyHasStock(pharm, req)) {
+        covered.push(req);
+      } else {
+        missing.push(req.name);
+      }
+    }
+
+    const isComplete = covered.length === medicines.length && pharm.open;
+    const distanceKm = Math.round(
+      calculateDistanceKm(userLocation.latitude, userLocation.longitude, pharm.latitude, pharm.longitude) * 10
+    ) / 10;
+    const prepTime = pharm.preparationTimeMinutes || 5;
+    const deliveryTime = pharm.deliveryTimeMinutes || Math.max(5, Math.round(distanceKm * 2.5));
+    const totalTime = prepTime + deliveryTime;
+
+    return {
+      candidateId: pharm.id,
+      candidateName: pharm.name,
+      address: pharm.address,
+      distanceKm,
+      open: pharm.open,
+      medicinesAvailableCount: covered.length,
+      totalMedicinesRequestedCount: medicines.length,
+      isComplete,
+      status: (isComplete ? 'Eligible' : 'Not eligible') as 'SELECTED' | 'Eligible' | 'Not eligible',
+      missingMedicines: missing,
+      preparationTimeMinutes: prepTime,
+      deliveryTimeMinutes: deliveryTime,
+      totalTimeMinutes: totalTime,
+      pharmacy: pharm,
+    };
+  });
+
+  // Filter for complete, open candidates
+  const completeCandidates = evaluatedCandidates.filter((c) => c.isComplete && c.open);
+
+  // If none can fulfill the complete request
+  if (completeCandidates.length === 0) {
+    const allMissing = Array.from(
+      new Set(evaluatedCandidates.flatMap((c) => c.missingMedicines))
+    );
+
+    return {
+      status: 'no_single_pharmacy',
+      mode: 'single_pharmacy',
+      bestPlan: null,
+      baseline: null,
+      timeSavedMinutes: 0,
+      speedupPercentage: 0,
+      missingMedicines: allMissing,
+      whyThisCombination: `None of the ${evaluatedCandidates.length} nearby candidate pharmacies currently stock all requested medicines.`,
+      singlePharmacyCandidates: evaluatedCandidates,
+      selectedSinglePharmacy: null,
+      whyThisPharmacy: `Checked ${evaluatedCandidates.length} nearby pharmacies within delivery radius, but none currently stock the complete ${medicines.length}-medicine request. Missing items: ${allMissing.join(', ')}.`,
+    };
+  }
+
+  // Rank eligible candidates:
+  // 1. Estimated completion time
+  // 2. Distance tie-breaking (if within 2 mins, prefer closer distance)
+  completeCandidates.sort((a, b) => {
+    const timeDiff = a.totalTimeMinutes - b.totalTimeMinutes;
+    if (Math.abs(timeDiff) <= 2) {
+      return a.distanceKm - b.distanceKm;
+    }
+    return timeDiff;
+  });
+
+  // Best candidate selected
+  const winner = completeCandidates[0];
+  winner.status = 'SELECTED';
+
+  // Mark others
+  evaluatedCandidates.forEach((c) => {
+    if (c.candidateId === winner.candidateId) {
+      c.status = 'SELECTED';
+    }
+  });
+
+  // Build deterministic explanation
+  const closerIncomplete = evaluatedCandidates.filter(
+    (c) => c.distanceKm < winner.distanceKm && !c.isComplete
+  );
+
+  let explanation = '';
+  if (closerIncomplete.length > 0) {
+    explanation = `${closerIncomplete.length} nearby ${
+      closerIncomplete.length === 1 ? 'pharmacy was' : 'pharmacies were'
+    } closer (${closerIncomplete.map((c) => `${c.distanceKm} km`).join(', ')}), but could not fulfil your complete medicine request. ${
+      winner.candidateName
+    } was the nearest candidate that had all ${medicines.length} requested medicines available in stock.`;
+  } else {
+    explanation = `${winner.candidateName} is the closest nearby pharmacy (${winner.distanceKm} km away) and has 100% of your requested medicines available with an estimated fulfilment time of ${winner.totalTimeMinutes} minutes.`;
+  }
+
+  const pharmacySegment: PharmacyFulfilmentSegment = {
+    pharmacyId: winner.pharmacy!.id,
+    pharmacyName: winner.candidateName,
+    address: winner.address,
+    latitude: winner.pharmacy!.latitude,
+    longitude: winner.pharmacy!.longitude,
+    distanceKm: winner.distanceKm,
+    preparationTimeMinutes: winner.preparationTimeMinutes,
+    deliveryTimeMinutes: winner.deliveryTimeMinutes,
+    totalTimeMinutes: winner.totalTimeMinutes,
+    allocatedMedicines: [...medicines],
+  };
+
+  const allocations: MedicineAllocation[] = medicines.map((m) => ({
+    medicineName: m.name,
+    quantity: m.quantity,
+    unit: m.unit,
+    pharmacyId: winner.pharmacy!.id,
+    pharmacyName: winner.candidateName,
+  }));
+
+  const bestPlan: FulfilmentPlan = {
+    planId: `plan_single_${winner.candidateId}`,
+    allMedicinesCovered: true,
+    medicinesCoveredCount: medicines.length,
+    totalMedicinesRequestedCount: medicines.length,
+    pharmacies: [pharmacySegment],
+    allocations,
+    estimatedCompletionMinutes: winner.totalTimeMinutes,
+    coordinationPenaltyMinutes: 0,
+    totalDistanceKm: winner.distanceKm,
+    pharmacyCount: 1,
+    score: 100 - winner.totalTimeMinutes,
+    explanation,
+    missingMedicines: [],
+  };
+
+  return {
+    status: 'success',
+    mode: 'single_pharmacy',
+    bestPlan,
+    baseline: {
+      pharmacy: winner.pharmacy,
+      canFulfillAll: true,
+      medicinesCoveredCount: medicines.length,
+      totalMedicinesRequestedCount: medicines.length,
+      coveredMedicines: [...medicines],
+      missingMedicines: [],
+      estimatedCompletionMinutes: winner.totalTimeMinutes,
+      timeSavedMinutes: 0,
+      distanceKm: winner.distanceKm,
+    },
+    timeSavedMinutes: 0,
+    speedupPercentage: 0,
+    missingMedicines: [],
+    whyThisCombination: explanation,
+    singlePharmacyCandidates: evaluatedCandidates,
+    selectedSinglePharmacy: winner.pharmacy,
+    whyThisPharmacy: explanation,
+  };
+}
+
+/**
  * Smart Fulfilment Engine
  * Deterministic combinatorial optimization over pharmacy network.
  *
@@ -50,11 +243,19 @@ export function runSmartFulfilmentEngine(
   input: EngineInput,
   pharmacies: Pharmacy[]
 ): EngineResult {
+  const mode = input.mode || 'combination';
+
+  // Branch into single_pharmacy mode if requested
+  if (mode === 'single_pharmacy') {
+    return runSinglePharmacyOptimization(input, pharmacies);
+  }
+
   const { medicines, urgency, userLocation = DEMO_USER_LOCATION } = input;
 
   if (!medicines || medicines.length === 0) {
     return {
       status: 'empty_request',
+      mode: 'combination',
       bestPlan: null,
       baseline: null,
       timeSavedMinutes: 0,
@@ -82,6 +283,7 @@ export function runSmartFulfilmentEngine(
   if (globallyMissingMedicines.length > 0) {
     return {
       status: 'no_complete_plan',
+      mode: 'combination',
       bestPlan: null,
       baseline,
       timeSavedMinutes: 0,
@@ -211,6 +413,7 @@ export function runSmartFulfilmentEngine(
   if (validPlans.length === 0) {
     return {
       status: 'no_complete_plan',
+      mode: 'combination',
       bestPlan: null,
       baseline,
       timeSavedMinutes: 0,
@@ -282,6 +485,7 @@ export function runSmartFulfilmentEngine(
 
   return {
     status: 'success',
+    mode: 'combination',
     bestPlan,
     baseline,
     timeSavedMinutes,

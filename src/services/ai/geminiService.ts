@@ -5,8 +5,23 @@ import { parseMedicineRequestOffline, DEMO_PRESET_MEDICINES } from './fallbackPa
 const STORAGE_KEY_API_KEY = 'medirush_gemini_api_key';
 
 export function getStoredGeminiApiKey(): string {
-  const envKey = ((import.meta.env.VITE_GEMINI_API_KEY as string) || '').trim();
-  const localKey = (localStorage.getItem(STORAGE_KEY_API_KEY) || '').trim();
+  let localKey = '';
+  let envKey = '';
+
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localKey = (localStorage.getItem(STORAGE_KEY_API_KEY) || '').trim();
+    }
+  } catch (_e) {}
+
+  try {
+    if (typeof import.meta !== 'undefined' && (import.meta as any).env) {
+      envKey = (((import.meta as any).env.VITE_GEMINI_API_KEY as string) || '').trim();
+    } else if (typeof process !== 'undefined' && process.env) {
+      envKey = ((process.env.VITE_GEMINI_API_KEY as string) || '').trim();
+    }
+  } catch (_e) {}
+
   if (localKey && (localKey.startsWith('AIza') || localKey.startsWith('AQ.')) && localKey.length > 20) {
     return localKey;
   }

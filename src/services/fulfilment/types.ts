@@ -7,10 +7,13 @@ export interface RequestedMedicine {
   unit: string;
 }
 
+export type FulfilmentMode = 'combination' | 'single_pharmacy';
+
 export interface EngineInput {
   medicines: RequestedMedicine[];
   urgency: UrgencyLevel;
   userLocation?: DemoLocation;
+  mode?: FulfilmentMode;
 }
 
 export interface MedicineAllocation {
@@ -62,8 +65,26 @@ export interface SinglePharmacyBaseline {
   distanceKm: number;
 }
 
+export interface SinglePharmacyCandidateEvaluation {
+  candidateId: string;
+  candidateName: string;
+  address: string;
+  distanceKm: number;
+  open: boolean;
+  medicinesAvailableCount: number;
+  totalMedicinesRequestedCount: number;
+  isComplete: boolean;
+  status: 'SELECTED' | 'Eligible' | 'Not eligible';
+  missingMedicines: string[];
+  preparationTimeMinutes: number;
+  deliveryTimeMinutes: number;
+  totalTimeMinutes: number;
+  pharmacy: Pharmacy | null;
+}
+
 export interface EngineResult {
-  status: 'success' | 'no_complete_plan' | 'empty_request';
+  status: 'success' | 'no_complete_plan' | 'empty_request' | 'no_single_pharmacy';
+  mode: FulfilmentMode;
   bestPlan: FulfilmentPlan | null;
   baseline: SinglePharmacyBaseline | null;
   timeSavedMinutes: number;
@@ -71,5 +92,10 @@ export interface EngineResult {
   missingMedicines: string[];
   whyThisCombination: string;
   topPlans?: FulfilmentPlan[];
+  // Single Pharmacy Mode additions
+  singlePharmacyCandidates?: SinglePharmacyCandidateEvaluation[];
+  selectedSinglePharmacy?: Pharmacy | null;
+  whyThisPharmacy?: string;
 }
+
 

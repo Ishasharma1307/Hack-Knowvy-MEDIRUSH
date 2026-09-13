@@ -548,7 +548,7 @@ export const UnderstandingPage: React.FC<UnderstandingPageProps> = ({
           onClick={handleConfirmClick}
           className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-[#1565C0] hover:bg-[#0D47A1] text-white font-bold text-base shadow-lg shadow-blue-600/30 hover:shadow-blue-600/40 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <span>Find Fastest Fulfilment</span>
+          <span>Order Medicines</span>
           <ArrowRight className="w-5 h-5" />
         </button>
       </div>

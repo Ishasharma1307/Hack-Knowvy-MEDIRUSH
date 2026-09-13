@@ -26,3 +26,18 @@ export interface DemoLocation {
   longitude: number;
   address: string;
 }
+
+export interface NearbyPharmacyCandidate {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  address: string;
+  distanceKm: number;
+  placeId?: string;
+  open: boolean;
+}
+
+export interface NearbyPharmacyProvider {
+  findNearbyPharmacies(location: { latitude: number; longitude: number }): Promise<NearbyPharmacyCandidate[]>;
+}

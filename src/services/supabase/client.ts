@@ -5,7 +5,7 @@ import { DEMO_PHARMACIES } from '../../data/demoPharmacies';
 const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL as string) || '';
 const SUPABASE_ANON_KEY = (import.meta.env.VITE_SUPABASE_ANON_KEY as string) || '';
 
-let supabaseInstance: SupabaseClient | null = null;
+export let supabaseInstance: SupabaseClient | null = null;
 
 if (SUPABASE_URL && SUPABASE_ANON_KEY && SUPABASE_URL.startsWith('http')) {
   try {
